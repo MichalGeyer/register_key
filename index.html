@@ -26,16 +26,29 @@
                 deleteButton.style.display = 'inline';
 
                 // Send the data to Google Sheets
+                // In your keydown event listener, modify the fetch call:
                 fetch('https://script.google.com/macros/s/AKfycbxdzv_EFEr_kUf9gHi7UcrXYO2a9oSSjubh6BhohVriYKyLtbOUorwZhNFR-O-hjzXIcQ/exec', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    mode: 'cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify(lastSubmission)
                 })
                 .then(response => response.json())
-                .then(data => console.log('Data saved:', data))
-                .catch(error => console.error('Error:', error));
+                .then(data => {
+                    console.log('Server response:', data);  // This will help debug any issues
+                    if (data.status === "success") {
+                        console.log('Data saved successfully');
+                    } else {
+                        console.error('Error saving data:', data.message);
+                    }
+                })
+                .catch(error => console.error('Fetch error:', error));
             }
         });
+
+
 
         document.getElementById('deleteButton').addEventListener('click', () => {
             if (lastSubmission) {
