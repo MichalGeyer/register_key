@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Key Logger</title>
+</head>
+<body>
+    <h1 id="message">Press Space to begin!</h1>
+    <button id="deleteButton" style="display:none;">Delete Last Answer</button>
+
+    <script>
+        let listening = false;
+        let lastSubmission = null;
+
+        document.addEventListener('keydown', (event) => {
+            const messageElement = document.getElementById('message');
+            const deleteButton = document.getElementById('deleteButton');
+
+            if (event.code === 'Space') {
+                listening = true; // Start listening after Space is pressed
+                messageElement.textContent = 'Waiting for your input...';
+            } else if (listening && (event.code === 'ArrowLeft' || event.code === 'ArrowRight')) {
+                const direction = event.code === 'ArrowLeft' ? 'Left' : 'Right';
+                listening = false; // Stop listening after an arrow key press
+                messageElement.textContent = `You pressed: ${direction}`;
+                lastSubmission = { direction, timestamp: new Date().toISOString() };
+                deleteButton.style.display = 'inline';
+
+                // Send the data to Google Sheets
+                fetch('https://script.google.com/macros/s/AKfycbxdzv_EFEr_kUf9gHi7UcrXYO2a9oSSjubh6BhohVriYKyLtbOUorwZhNFR-O-hjzXIcQ/exec', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(lastSubmission)
+                })
+                .then(response => response.json())
+                .then(data => console.log('Data saved:', data))
+                .catch(error => console.error('Error:', error));
+            }
+        });
+
+        document.getElementById('deleteButton').addEventListener('click', () => {
+            if (lastSubmission) {
+                // Send delete request to Google Sheets (assumes a DELETE endpoint is implemented)
+                fetch('https://script.google.com/macros/s/AKfycbxdzv_EFEr_kUf9gHi7UcrXYO2a9oSSjubh6BhohVriYKyLtbOUorwZhNFR-O-hjzXIcQ/exec', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timestamp: lastSubmission.timestamp })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Last answer deleted:', data);
+                    messageElement.textContent = 'Press Space to begin!';
+                    deleteButton.style.display = 'none';
+                    lastSubmission = null;
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        });
+    </script>
+</body>
+</html>
+
