@@ -10,65 +10,73 @@
     <script>
         let listening = false;
         let lastSubmission = null;
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxdzv_EFEr_kUf9gHi7UcrXYO2a9oSSjubh6BhohVriYKyLtbOUorwZhNFR-O-hjzXIcQ/exec';
 
-        document.addEventListener('keydown', (event) => {
+        document.addEventListener('keydown', async (event) => {
             const messageElement = document.getElementById('message');
             const deleteButton = document.getElementById('deleteButton');
 
             if (event.code === 'Space') {
-                listening = true; // Start listening after Space is pressed
+                listening = true;
                 messageElement.textContent = 'Waiting for your input...';
             } else if (listening && (event.code === 'ArrowLeft' || event.code === 'ArrowRight')) {
                 const direction = event.code === 'ArrowLeft' ? 'Left' : 'Right';
-                listening = false; // Stop listening after an arrow key press
+                listening = false;
                 messageElement.textContent = `You pressed: ${direction}`;
                 lastSubmission = { direction, timestamp: new Date().toISOString() };
                 deleteButton.style.display = 'inline';
 
-                // Send the data to Google Sheets
-                // In your keydown event listener, modify the fetch call:
-                fetch('https://script.google.com/macros/s/AKfycbxdzv_EFEr_kUf9gHi7UcrXYO2a9oSSjubh6BhohVriYKyLtbOUorwZhNFR-O-hjzXIcQ/exec', {
-                    method: 'POST',
-                    mode: 'cors',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(lastSubmission)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Server response:', data);  // This will help debug any issues
-                    if (data.status === "success") {
-                        console.log('Data saved successfully');
-                    } else {
-                        console.error('Error saving data:', data.message);
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        mode: 'cors',
+                        body: JSON.stringify(lastSubmission)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                })
-                .catch(error => console.error('Fetch error:', error));
+                    const data = await response.json();
+                    console.log('Success:', data);
+                } catch (error) {
+                    console.error('Error:', error);
+                    messageElement.textContent = 'Error saving your input. Please try again.';
+                }
             }
         });
 
-
-
-        document.getElementById('deleteButton').addEventListener('click', () => {
+        document.getElementById('deleteButton').addEventListener('click', async () => {
             if (lastSubmission) {
-                // Send delete request to Google Sheets (assumes a DELETE endpoint is implemented)
-                fetch('https://script.google.com/macros/s/AKfycbxdzv_EFEr_kUf9gHi7UcrXYO2a9oSSjubh6BhohVriYKyLtbOUorwZhNFR-O-hjzXIcQ/exec', {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ timestamp: lastSubmission.timestamp })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Last answer deleted:', data);
-                    messageElement.textContent = 'Press Space to begin!';
-                    deleteButton.style.display = 'none';
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        mode: 'cors',
+                        body: JSON.stringify({ timestamp: lastSubmission.timestamp })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log('Deleted:', data);
+                    document.getElementById('message').textContent = 'Press Space to begin!';
+                    document.getElementById('deleteButton').style.display = 'none';
                     lastSubmission = null;
-                })
-                .catch(error => console.error('Error:', error));
+                } catch (error) {
+                    console.error('Error:', error);
+                    document.getElementById('message').textContent = 'Error deleting your input. Please try again.';
+                }
             }
         });
     </script>
 </body>
 </html>
-
